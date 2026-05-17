@@ -20,7 +20,7 @@ SALT = "سِرّ_خاص_قوي_غير_مُشارَك"
 
 full = SALT + "|" + concat
 h = hashlib.sha256(full.encode()).hexdigest()
-hash=['f2fa637d0b3e518870979685ec43903ee9735ea40a2a1d9f17537735e27c9758','47921ca1c3f6bda073c4b3422d3c610a8f573ebce0af797f2cd69550a19547b0']
+hash=['daaeac2cd93a2b45eb71d4530a047016d2c7c135f361b930895fc9d8ebaf0265','f2fa637d0b3e518870979685ec43903ee9735ea40a2a1d9f17537735e27c9758','47921ca1c3f6bda073c4b3422d3c610a8f573ebce0af797f2cd69550a19547b0']
 if h in hash:
     print('good  ')
     pass
