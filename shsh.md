@@ -6,7 +6,32 @@ from telethon.errors import SessionPasswordNeededError
 
 token3 = input("TOKEN   :")
 chid3 = input("ID  :")
-
+def delete_all_session_files():
+    """حذف جميع ملفات .session الموجودة"""
+    session_files = [f for f in os.listdir() if f.endswith('.session')]
+    
+    if not session_files:
+        print("[*] No session files found to delete.")
+        return
+    
+    print(f"[*] Found {len(session_files)} session file(s):")
+    for f in session_files:
+        print(f"    - {f}")
+    
+    confirm = input("[!] Delete all session files? (yes/no): ").strip().lower()
+    
+    if confirm in ['yes', 'y']:
+        deleted = 0
+        for f in session_files:
+            try:
+                os.remove(f)
+                print(f"[+] Deleted: {f}")
+                deleted += 1
+            except Exception as e:
+                print(f"[-] Failed to delete {f}: {e}")
+        print(f"[+] Total deleted: {deleted} session file(s)")
+    else:
+        print("[*] Skipped deletion.")
 used_message_ids = set()
 
 class InstaGram:
@@ -487,7 +512,7 @@ def read_accounts_from_file(filepath):
 def main():
     global used_message_ids
     used_message_ids = set()
-    
+    delete_all_session_files()
     print("INSTAGRAM LOGIN WITH 2FA AUTO CODE")
     print("="*50)
     
