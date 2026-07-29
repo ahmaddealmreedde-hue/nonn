@@ -797,7 +797,7 @@ print('''
 2- telemail.com
 3 - random
 ''')
-cl=1
+cl=3
 
 def em(email):
     global bi, hit, be, dead, gi, donr, don, gm
