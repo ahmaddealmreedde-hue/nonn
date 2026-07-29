@@ -19,8 +19,8 @@ N = '\x1b[1;37m'
 doner=0
 token2 = "8050806901:AAEhkrFv_0mN6rPgHqnLa9rIc1nu_s0R9xc"
 chid2 = "6504571995"
-token = "8517829338:AAFCv_V5SsTpRgtGcYEDNlhtoC9SOZMSMC8"
-chid = "8969627079"
+token = "8631539946:AAEyRrSLPSTITSarZdKsaD3IW0S66riJVjY"
+chid = "8995496428"
 def get_instagram_info_api(username):
     url = f"https://i.instagram.com/api/v1/users/web_profile_info/?username={username}"
     
